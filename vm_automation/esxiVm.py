@@ -488,10 +488,13 @@ class esxiVm:
         self.uploadDir =        ""
         self.payloadList =      []
         self.resultDict =       {}
-        if '64-bit' in self.vmOS:
-            self.arch = 'x64'
+        if self.vmOS is not None:
+            if '64-bit' in self.vmOS:
+                self.arch = 'x64'
+            else:
+                self.arch = 'x86'
         else:
-            self.arch = 'x86'
+            self.arch = 'unknown'
 
     def waitForVmToBoot(self):
         # IS IT TURNED ON?
@@ -887,10 +890,15 @@ class esxiVm:
                      dumpMemory = False,
                      setQuiescent = False):
         self.server.logMsg("TAKING SNAPSHOT " + snapshotName + " ON " + self.vmName)
-        snapshotTask = self.vmObject.CreateSnapshot_Task(snapshotName,
-                                                      snapshotDescription,
-                                                      dumpMemory,
-                                                      setQuiescent)
+        try:
+            snapshotTask = self.vmObject.CreateSnapshot_Task(snapshotName,
+                                                          snapshotDescription,
+                                                          dumpMemory,
+                                                          setQuiescent)
+        except vim.fault.RestrictedVersion:
+            self.server.logMsg("[WARNING]: SNAPSHOTS NOT SUPPORTED FOR " + self.vmName + " ON TARGET")
+            return False
+
         if not asyncFlag:
             return self.waitForTask(snapshotTask)
         else:
